@@ -18,8 +18,12 @@ df.columns = ['B', 'G', 'R', 'skin']
 st.title('Human skin segmentation with GMM EM Algorithm')
 
 st.markdown(
-    " The Skin Segmentation dataset is constructed over B, G, R color space. Skin and Nonskin dataset is generated"
-    "using skin textures from face images of diversity of age, gender, and race people."
+    
+    "The skin dataset is collected by randomly sampling B,G,R values from face images of various age groups (young, middle, and old)"
+    "race groups (white, black, and asian), and genders obtained from FERET database and PAL database. Total learning sample size is 245057; out of which 50859 is \
+    the skin samples and 194198 is non-skin samples. Color FERET Image Database"
+    "the dataset is constructed over B, G, R color space. Skin and Nonskin dataset is generated \
+    using skin textures from face images of diversity of age, gender, and race people."
     
     "The dataset is collect from UCI repository  "
     "[ Link to data ](https://archive.ics.uci.edu/ml/datasets/skin+segmentation)"
