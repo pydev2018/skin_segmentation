@@ -6,7 +6,8 @@ import pandas as pd
 import seaborn as sns
 from skimage.io import imread
 from skimage.color import rgb2ycbcr, gray2rgb
-from PIL import Image
+import PIL 
+Image = PIL.Image()
 import streamlit as st
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
