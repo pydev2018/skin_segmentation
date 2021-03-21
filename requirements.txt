@@ -5,4 +5,4 @@ Pillow==2.2.2
 pandas
 numpy
 seaborn
-pillow
+
