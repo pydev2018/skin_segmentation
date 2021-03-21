@@ -93,21 +93,20 @@ st.image(
     image, caption=f"Input Image", use_column_width=True,
 )
 
-@st.cache
-def skin_segmentation_using_trained_GMM(image):
-    image = imread(image)[...,:3]
-    #print(image.shape)
-    proc_image = np.reshape(rgb2ycbcr(image), (-1, 3))
-    skin_score = skin_gmm.score_samples(proc_image[...,1:])
-    not_skin_score = not_skin_gmm.score_samples(proc_image[...,1:])
-    result = skin_score > not_skin_score
-    result = result.reshape(image.shape[0], image.shape[1])
-    result = np.bitwise_and(gray2rgb(255*result.astype(np.uint8)), image)
-    return result 
+
+image = imread(image)[...,:3]
+#print(image.shape)
+proc_image = np.reshape(rgb2ycbcr(image), (-1, 3))
+skin_score = skin_gmm.score_samples(proc_image[...,1:])
+not_skin_score = not_skin_gmm.score_samples(proc_image[...,1:])
+result = skin_score > not_skin_score
+result = result.reshape(image.shape[0], image.shape[1])
+result = np.bitwise_and(gray2rgb(255*result.astype(np.uint8)), image)
+    
 
 st.markdown('## Image after skin segmentation')
 
 st.image(
-    skin_segmentation_using_trained_GMM(image), caption=f"Segmented Image", use_column_width=True)
+    result, caption=f"Segmented Image", use_column_width=True)
     
 
