@@ -35,7 +35,7 @@ st.markdown(
 )
 
 st.markdown('## Factor plot of RGB Channel data')
-st.image('./Images/factor_plot.jpg')
+st.image('./Images/factor_plot.JPG')
 
 st.markdown('''
             YCbCr is one of two primary color spaces used to represent digital media, the other is RGB. 
@@ -50,13 +50,13 @@ st.markdown('''
 
 
 st.markdown('## Factor plot of YCbCr Channel data')
-st.image('./Images/cbcr_distribution.jpg')
+st.image('./Images/cbcr_distribution.JPG')
 
 st.markdown('''
             After that we will split the skin and the non-skin training examples and fit two Gaussian mixture
             models, one on the skin examples and another on the nonskin examples, each using 4 Gaussian components.
             ''')
-st.image('./Images/gmm_fitted.jpg')
+st.image('./Images/gmm_fitted.JPG')
 
 
 
@@ -72,6 +72,9 @@ not_skin_data = df[df.skin==2].drop(['skin'], axis=1).to_numpy()
 
 skin_gmm = GaussianMixture(n_components=4, covariance_type='full').fit(skin_data)
 not_skin_gmm = GaussianMixture(n_components=4, covariance_type='full').fit(not_skin_data)
+
+st.markdown('###  We can use our trained GMM model to perform skin segmentation on any picture with skin exposure \
+            the model has now learned about the difference between pixels with skin and without skin' )
 
 st.markdown('## Upload any image on which you wish to perform skin segmentation')
 img_file_buffer = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
