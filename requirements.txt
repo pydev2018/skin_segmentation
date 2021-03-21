@@ -1,0 +1,6 @@
+scikit-learn
+streamlit
+scikit-image
+Pillow==2.2.2
+pandas
+numpy
