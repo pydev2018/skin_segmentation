@@ -11,9 +11,25 @@ Image = PIL.Image
 import streamlit as st
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
-df = pd.read_csv('skin_segmentation_data.csv', header=None, delim_whitespace=True)
-df.columns = ['B', 'G', 'R', 'skin']
 
+
+st.set_page_config(
+    page_title=" Skin Segmentation",
+    page_icon=":shark",  # EP: how did they find a symbol?
+    
+    
+)
+
+@st.cache(allow_output_mutation=True)
+def read_df():
+
+    df = pd.read_csv('skin_segmentation_data.csv', header=None, delim_whitespace=True)
+    df.columns = ['B', 'G', 'R', 'skin']
+    
+    return df 
+    
+
+df = read_df()
 
 st.title('Human skin segmentation with GMM EM Algorithm')
 
@@ -50,9 +66,22 @@ st.markdown('''
             
             --
             
-            We will extract the Cb and Cr channel values from the RGB values
+            We will extract the Cb and Cr channel values from the RGB values please press the button to extract YCbCr data
             ''')
 
+@st.cache
+def extract_YCbCr(df):
+    df['Cb'] = np.round(128 -.168736*df.R -.331364*df.G + .5*df.B).astype(int)
+    df['Cr'] = np.round(128 +.5*df.R - .418688*df.G - .081312*df.B).astype(int)
+    df.drop(['B','G','R'], axis=1, inplace=True)
+    return df 
+    
+
+if st.button("Extract YCbCr Data"):
+    df_data = extract_YCbCr(df)
+    st.markdown("### 5 samples taken randomly from the data")
+    st.table(df_data.sample(5))
+    
 
 st.markdown('## Factor plot of YCbCr Channel data')
 st.image('./Images/cbcr_distribution.JPG')
@@ -61,25 +90,37 @@ st.markdown('''
             After that we will split the skin and the non-skin training examples and fit two Gaussian mixture
             models, one on the skin examples and another on the nonskin examples, each using 4 Gaussian components.
             ''')
+
+
+@st.cache
+def fit_GMM_Model(df):
+    skin_data = df[df.skin==1].drop(['skin'], axis=1).to_numpy()
+    not_skin_data = df[df.skin==2].drop(['skin'], axis=1).to_numpy()
+    skin_gmm = GaussianMixture(n_components=4, covariance_type='full').fit(skin_data)
+    not_skin_gmm = GaussianMixture(n_components=4, covariance_type='full').fit(not_skin_data)
+    return skin_gmm, not_skin_gmm
+    
+    
+
+
+if st.button("Fit GMM Model"):
+    global skin_gmm
+    global not_skin_gmm
+    skin_gmm, not_skin_gmm = fit_GMM_Model(df)
+    
+    
+    #print(skin_gmm, not_skin_gmm)
+    st.markdown("### Model fitted")
+    
+
 st.image('./Images/gmm_fitted.JPG')
 
 
 
-
-df['Cb'] = np.round(128 -.168736*df.R -.331364*df.G + .5*df.B).astype(int)
-df['Cr'] = np.round(128 +.5*df.R - .418688*df.G - .081312*df.B).astype(int)
-df.drop(['B','G','R'], axis=1, inplace=True)
-
-
-
-skin_data = df[df.skin==1].drop(['skin'], axis=1).to_numpy()
-not_skin_data = df[df.skin==2].drop(['skin'], axis=1).to_numpy()
-
-skin_gmm = GaussianMixture(n_components=4, covariance_type='full').fit(skin_data)
-not_skin_gmm = GaussianMixture(n_components=4, covariance_type='full').fit(not_skin_data)
-
 st.markdown('###  We can use our trained GMM model to perform skin segmentation on any picture with skin exposure \
             the model has now learned about the difference between pixels with skin and without skin' )
+
+
 
 st.markdown('## Upload any image on which you wish to perform skin segmentation')
 img_file_buffer = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
@@ -94,19 +135,32 @@ st.image(
 )
 
 
-image = imread(image)[...,:3]
-#print(image.shape)
-proc_image = np.reshape(rgb2ycbcr(image), (-1, 3))
-skin_score = skin_gmm.score_samples(proc_image[...,1:])
-not_skin_score = not_skin_gmm.score_samples(proc_image[...,1:])
-result = skin_score > not_skin_score
-result = result.reshape(image.shape[0], image.shape[1])
-result = np.bitwise_and(gray2rgb(255*result.astype(np.uint8)), image)
+@st.cache
+def segment_skin_from_image(image, skin_gmm, not_skin_gmm):
+    image = imread(image)[...,:3]
+    #print(image.shape)
+    proc_image = np.reshape(rgb2ycbcr(image), (-1, 3))
+    #print(proc_image.shape)
+    skin_score = skin_gmm.score_samples(proc_image[...,1:])
+    not_skin_score = not_skin_gmm.score_samples(proc_image[...,1:])
+    result = skin_score > not_skin_score
+    result = result.reshape(image.shape[0], image.shape[1])
+    result = np.bitwise_and(gray2rgb(255*result.astype(np.uint8)), image)
+    return result 
     
 
-st.markdown('## Image after skin segmentation')
 
-st.image(
-    result, caption=f"Segmented Image", use_column_width=True)
+
+if st.button("Segment skin from image"):
+    skin_gmm, not_skin_gmm = fit_GMM_Model(df)
+    result = segment_skin_from_image(image, skin_gmm, not_skin_gmm)
+    st.markdown('## Image after skin segmentation')
+    st.image(result, caption=f"Segmented Image", use_column_width=True) 
+    
+
+
+
+
+
     
 
