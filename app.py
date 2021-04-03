@@ -10,7 +10,7 @@ import PIL
 Image = PIL.Image
 import streamlit as st
 st.set_option('deprecation.showPyplotGlobalUse', False)
-
+import joblib
 
 
 st.set_page_config(
@@ -66,24 +66,12 @@ st.markdown('''
             
             --
             
-            We will extract the Cb and Cr channel values from the RGB values please press the button to extract YCbCr data
+            We have extracted the Cb and Cr channel values from the RGB values 
             ''')
 
-@st.cache
-def extract_YCbCr(df):
-    df['Cb'] = np.round(128 -.168736*df.R -.331364*df.G + .5*df.B).astype(int)
-    df['Cr'] = np.round(128 +.5*df.R - .418688*df.G - .081312*df.B).astype(int)
-    df.drop(['B','G','R'], axis=1, inplace=True)
-    return df 
-    
 
-if st.button("Extract YCbCr Data"):
-    df_data = extract_YCbCr(df)
-    st.markdown("### 5 samples taken randomly from the data")
-    st.table(df_data.sample(5))
-    
 
-st.markdown('## Factor plot of YCbCr Channel data')
+st.markdown('## Factor plot of Extracted YCbCr Channel data')
 st.image('./Images/cbcr_distribution.JPG')
 
 st.markdown('''
@@ -92,33 +80,14 @@ st.markdown('''
             ''')
 
 
-@st.cache
-def fit_GMM_Model(df):
-    skin_data = df[df.skin==1].drop(['skin'], axis=1).to_numpy()
-    not_skin_data = df[df.skin==2].drop(['skin'], axis=1).to_numpy()
-    skin_gmm = GaussianMixture(n_components=4, covariance_type='full').fit(skin_data)
-    not_skin_gmm = GaussianMixture(n_components=4, covariance_type='full').fit(not_skin_data)
-    return skin_gmm, not_skin_gmm
-    
-    
 
-
-if st.button("Fit GMM Model"):
-    global skin_gmm
-    global not_skin_gmm
-    skin_gmm, not_skin_gmm = fit_GMM_Model(df)
-    
-    
-    #print(skin_gmm, not_skin_gmm)
-    st.markdown("### Model fitted")
-    
 
 st.image('./Images/gmm_fitted.JPG')
 
 
 
 st.markdown('###  We can use our trained GMM model to perform skin segmentation on any picture with skin exposure \
-            the model has now learned about the difference between pixels with skin and without skin' )
+            the model has now learned about the difference between pixels with skin and without skin and we will use this model to segment the images' )
 
 
 
@@ -148,11 +117,16 @@ def segment_skin_from_image(image, skin_gmm, not_skin_gmm):
     result = np.bitwise_and(gray2rgb(255*result.astype(np.uint8)), image)
     return result 
     
+@st.cache
+def load_models():
+    skin_gmm = joblib.load('skin_model.joblib.pkl')
+    not_skin_gmm = joblib.load('non_skin_model.joblib.pkl')
+    return skin_gmm, not_skin_gmm
 
+skin_gmm, not_skin_gmm = load_models()
 
 
 if st.button("Segment skin from image"):
-    skin_gmm, not_skin_gmm = fit_GMM_Model(df)
     result = segment_skin_from_image(image, skin_gmm, not_skin_gmm)
     st.markdown('## Image after skin segmentation')
     st.image(result, caption=f"Segmented Image", use_column_width=True) 
