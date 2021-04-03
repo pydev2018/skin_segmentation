@@ -11,7 +11,8 @@ Image = PIL.Image
 import streamlit as st
 st.set_option('deprecation.showPyplotGlobalUse', False)
 import joblib
-
+from mem_top import mem_top
+import logging
 
 st.set_page_config(
     page_title=" Skin Segmentation",
@@ -20,16 +21,6 @@ st.set_page_config(
     
 )
 
-@st.cache(allow_output_mutation=True)
-def read_df():
-
-    df = pd.read_csv('skin_segmentation_data.csv', header=None, delim_whitespace=True)
-    df.columns = ['B', 'G', 'R', 'skin']
-    
-    return df 
-    
-
-df = read_df()
 
 st.title('Human skin segmentation with GMM EM Algorithm')
 
@@ -48,8 +39,6 @@ st.markdown(
 
 st.image('./Images/uci.jpg')
 
-st.markdown('### 5 samples taken randomly from the data')
-st.table(df.sample(5))
 
 st.markdown(
     '### Methodology '
@@ -104,18 +93,21 @@ st.image(
 )
 
 
-@st.cache
+
 def segment_skin_from_image(image, skin_gmm, not_skin_gmm):
     image = imread(image)[...,:3]
     #print(image.shape)
     proc_image = np.reshape(rgb2ycbcr(image), (-1, 3))
+   
     #print(proc_image.shape)
     skin_score = skin_gmm.score_samples(proc_image[...,1:])
     not_skin_score = not_skin_gmm.score_samples(proc_image[...,1:])
     result = skin_score > not_skin_score
-    result = result.reshape(image.shape[0], image.shape[1])
-    result = np.bitwise_and(gray2rgb(255*result.astype(np.uint8)), image)
-    return result 
+    result_1 = result.reshape(image.shape[0], image.shape[1])
+    del result 
+    result_2 = np.bitwise_and(gray2rgb(255*result_1.astype(np.uint8)), image)
+    del result_1
+    return result_2
     
 @st.cache
 def load_models():
@@ -124,7 +116,7 @@ def load_models():
     return skin_gmm, not_skin_gmm
 
 skin_gmm, not_skin_gmm = load_models()
-
+print(mem_top())
 
 if st.button("Segment skin from image"):
     result = segment_skin_from_image(image, skin_gmm, not_skin_gmm)
@@ -135,6 +127,4 @@ if st.button("Segment skin from image"):
 
 
 
-
-    
 
