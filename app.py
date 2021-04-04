@@ -1,18 +1,20 @@
 import numpy as np
 #import matplotlib as mpl
-#import matplotlib.pyplot as plt
-from sklearn.mixture import GaussianMixture
-import pandas as pd
-import seaborn as sns
+
+
 from skimage.io import imread
 from skimage.color import rgb2ycbcr, gray2rgb
-import PIL 
-Image = PIL.Image
+#from PIL import Image
+
 import streamlit as st
-st.set_option('deprecation.showPyplotGlobalUse', False)
-import joblib
-from mem_top import mem_top
-import logging
+
+from joblib import load
+#from mem_top import mem_top
+
+import tracemalloc
+# Prints out a summary of the large objects
+
+import gc 
 
 st.set_page_config(
     page_title=" Skin Segmentation",
@@ -80,13 +82,19 @@ st.markdown('###  We can use our trained GMM model to perform skin segmentation 
 
 
 
-st.markdown('## Upload any image on which you wish to perform skin segmentation')
-img_file_buffer = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
+st.markdown('## Choose an image on which you wish to perform skin segmentation')
+#img_file_buffer = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
 
-if img_file_buffer is not None:
-    image = (img_file_buffer)
-else:
+choose_image = ['Female Model', 'Powerlifter', 'Football Players']
+selection = st.selectbox("Select Image", options=choose_image)
+
+if selection == 'Female Model' :
+    image = ('./Images/demo_4.jpg')
+if selection == 'Powerlifter' :
     image = ('./Images/demo.jpg')
+if selection == 'Football Players':
+    image = ('./Images/demo_2.png')
+    
     
 st.image(
     image, caption=f"Input Image", use_column_width=True,
@@ -94,37 +102,52 @@ st.image(
 
 
 
-def segment_skin_from_image(image, skin_gmm, not_skin_gmm):
-    image = imread(image)[...,:3]
-    #print(image.shape)
-    proc_image = np.reshape(rgb2ycbcr(image), (-1, 3))
-   
-    #print(proc_image.shape)
-    skin_score = skin_gmm.score_samples(proc_image[...,1:])
-    not_skin_score = not_skin_gmm.score_samples(proc_image[...,1:])
-    result = skin_score > not_skin_score
-    result_1 = result.reshape(image.shape[0], image.shape[1])
-    del result 
-    result_2 = np.bitwise_and(gray2rgb(255*result_1.astype(np.uint8)), image)
-    del result_1
-    return result_2
-    
-@st.cache
+
 def load_models():
-    skin_gmm = joblib.load('skin_model.joblib.pkl')
-    not_skin_gmm = joblib.load('non_skin_model.joblib.pkl')
+    skin_gmm = load('skin_model.joblib.pkl')
+    not_skin_gmm = load('non_skin_model.joblib.pkl')
     return skin_gmm, not_skin_gmm
 
 skin_gmm, not_skin_gmm = load_models()
-print(mem_top())
+
+    
+gc.collect()
+
+
+
+def segment_image(image, skin_gmm, not_skin_gmm):
+    #image_shape = (imread(image)[...,:3]).shape
+    image = imread(image)[...,:3]
+    proc_image = np.reshape(rgb2ycbcr(image), (-1, 3))
+    skin_score = skin_gmm.score_samples(proc_image[...,1:])
+    not_skin_score = not_skin_gmm.score_samples(proc_image[...,1:])
+    result = skin_score > not_skin_score
+    del skin_score, not_skin_score, proc_image
+    gc.collect()
+    result = result.reshape(image.shape[0], image.shape[1])
+    result = np.bitwise_and(gray2rgb(255*result.astype(np.uint8)), image)
+    del image 
+    gc.collect()
+    return result
+    
+    
+    
+    
 
 if st.button("Segment skin from image"):
-    result = segment_skin_from_image(image, skin_gmm, not_skin_gmm)
+    result = segment_image(image, skin_gmm, not_skin_gmm)
     st.markdown('## Image after skin segmentation')
     st.image(result, caption=f"Segmented Image", use_column_width=True) 
     
+gc.collect()
 
 
 
 
+
+
+
+
+    
+    
 
